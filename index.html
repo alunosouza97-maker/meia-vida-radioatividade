@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Operação Meia-Vida · Campus Iporá</title>
+<style>
+:root{--bg:#101815;--pn:#18241F;--ln:#2C3E36;--tx:#E8F0EB;--mu:#9FB3A8;--ye:#F2C230;--gr:#4CC38A;--rd:#E5533D;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+#app{height:100%;display:flex;flex-direction:column}
+h1,h2{margin:0;color:var(--ye);letter-spacing:.5px}
+button{font:inherit;color:var(--tx);background:var(--pn);border:1px solid var(--ln);border-radius:8px;min-height:44px;padding:0 14px;cursor:pointer}
+button.pri{background:var(--ye);color:#101815;border:0;font-weight:700}
+button.on{border:2px solid var(--ye)}
+button:disabled{opacity:.5;cursor:default}
+input{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--ln);border-radius:8px;min-height:44px;padding:0 12px;width:100%}
+#hud{display:flex;gap:12px;align-items:center;padding:8px 12px;background:var(--pn);border-bottom:1px solid var(--ln);font-size:12px;color:var(--mu)}
+.bar{flex:1;min-width:0}.bar i{display:block;height:10px;border-radius:5px;background:var(--ln);margin-top:3px;overflow:hidden}.bar b{display:block;height:10px;border-radius:5px}
+#map{flex:1;min-height:0;width:100%;touch-action:manipulation;background:#142019}
+#pan{padding:8px 12px;display:flex;flex-direction:column;gap:8px;background:var(--pn);border-top:1px solid var(--ln)}
+#log{height:76px;overflow-y:auto;font-size:13px;color:var(--mu)}#log b{color:var(--tx)}
+.row{display:flex;gap:8px}
+.ov{position:fixed;inset:0;background:rgba(10,16,13,.94);display:none;flex-direction:column;gap:12px;padding:24px 20px;overflow-y:auto;z-index:5;padding-top:calc(24px + env(safe-area-inset-top,0px))}
+.ov.show{display:flex}
+.ov .cls{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sw{width:44px;padding:0;border-radius:50%}
+.mu{color:var(--mu);font-size:13px}
+#fb{padding:10px 12px;border-left:4px solid var(--gr);background:var(--pn);display:none}
+</style>
+</head>
+<body>
+<div id="app">
+ <div id="hud">
+  <div class="bar">SUA DOSE <span id="dv">0</span>/100 µSv<i><b id="db" style="width:0;background:var(--ye)"></b></i></div>
+  <div class="bar">FONTE ÔMEGA <span id="tv">100</span>%<i><b id="tb" style="width:100%;background:var(--rd)"></b></i></div>
+  <div id="pc">1 on-line</div>
+ </div>
+ <svg id="map" viewBox="0 0 660 470" role="img" aria-label="Mapa esquemático do campus. Toque para andar."><g id="zs"></g><g id="ps"></g></svg>
+ <div id="pan">
+  <div id="log" aria-live="polite"></div>
+  <div class="row"><input id="ci" maxlength="120" placeholder="Mensagem para o campus" aria-label="Mensagem"><button id="cs" type="button">Enviar</button></div>
+  <button id="zb" class="pri" type="button" disabled>Ande até uma zona</button>
+ </div>
+</div>
+
+<div id="intro" class="ov show">
+ <h1>Operação Meia-Vida</h1>
+ <div class="mu">IF Goiano, Campus Iporá. Um acidente espalhou radiação pelo campus. Juntos, respondam aos desafios de química para conter a Fonte Ômega antes que a dose de todo mundo suba demais.</div>
+ <label class="mu" for="nm">Seu nome</label>
+ <input id="nm" maxlength="14" placeholder="Ex.: Ana">
+ <div class="mu">Escolha sua classe (respostas certas na zona da sua especialidade valem o dobro)</div>
+ <div class="cls" id="cl"></div>
+ <div class="mu">Cor do seu avatar</div>
+ <div class="row" id="kl"></div>
+ <button id="go" class="pri" type="button">Entrar no campus</button>
+ <div class="mu" id="note"></div>
+</div>
+
+<div id="quiz" class="ov">
+ <h2 id="qz"></h2><div class="mu" id="qs"></div>
+ <div id="qo" style="display:flex;flex-direction:column;gap:8px"></div>
+ <div id="fb"></div>
+ <div class="row"><button id="qx" type="button">Fechar</button></div>
+</div>
+
+<div id="end" class="ov">
+ <h1 id="et"></h1><div id="ex"></div>
+ <button id="eb" class="pri" type="button"></button>
+</div>
+
+<script>
+(function(){
+var $=function(s){return document.querySelector(s)};
+var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})};
+var Z=[
+{n:"Praça central",x:330,y:235,r:60,c:"#4CC38A",q:[
+ ["Qual é a regra de ouro para se proteger da radiação?",["Reduzir o tempo, aumentar a distância e usar blindagem","Ficar o máximo de tempo perto da fonte","Usar só uma máscara comum","Correr e gritar"],0,"Menos tempo, mais distância e a blindagem certa reduzem a dose."],
+ ["O que um detector Geiger mede?",["Temperatura","Radiação ionizante","pH da água","Umidade do ar"],1,"Ele conta a radiação ionizante que passa por ele."]]},
+{n:"Garagem",x:30,y:30,w:120,h:70,c:"#F2C230",q:[
+ ["Uma área tem 20 µSv/h. Quanta dose você recebe em 3 horas?",["6 µSv","23 µSv","60 µSv","200 µSv"],2,"Dose = taxa × tempo = 20 × 3 = 60 µSv."],
+ ["Rota A: 30 µSv/h por 10 min. Rota B: 60 µSv/h por 4 min. Qual dá menos dose?",["Rota A (5 µSv)","Rota B (4 µSv)","São iguais","Não dá para calcular"],1,"A: 30 × 10/60 = 5 µSv. B: 60 × 4/60 = 4 µSv."]]},
+{n:"Bloco 5 (apoio)",x:190,y:30,w:140,h:70,c:"#F2C230",q:[
+ ["Qual a diferença entre irradiação e contaminação?",["Nenhuma","Irradiação é receber radiação de fora; contaminação é ter material radioativo sobre ou dentro do corpo","Contaminação só ocorre com raios X","Irradiação só ocorre com alimentos"],1,"Quem foi irradiado não vira radioativo. Quem foi contaminado carrega material e precisa ser descontaminado."],
+ ["Primeiro cuidado com alguém contaminado na pele?",["Retirar as roupas e lavar com água e sabão","Passar álcool e esfregar forte","Mandar para casa","Dar um banho de sol"],0,"Tirar a roupa remove boa parte do material, e água com sabão tira o resto sem ferir a pele."]]},
+{n:"Ginásio",x:480,y:40,w:140,h:80,c:"#4CC38A",q:[
+ ["Qual radiação é barrada por uma folha de papel?",["Alfa","Beta","Gama","Todas"],0,"A partícula alfa é grande e perde energia rápido."],
+ ["Qual o melhor material para blindar radiação gama?",["Papel","Plástico fino","Lâmina de alumínio","Chumbo ou concreto espesso"],3,"A gama é muito penetrante e pede material denso e espesso."]]},
+{n:"Bloco 2 (laboratórios)",x:150,y:340,w:220,h:80,c:"#F2873A",q:[
+ ["200 g de um material com meia-vida de 6 h. Quanto resta após 18 h?",["100 g","50 g","25 g","0 g"],2,"18 ÷ 6 = 3 meias-vidas: 200 → 100 → 50 → 25 g."],
+ ["Taxa de 160 µSv/h, nível seguro de 10 µSv/h, meia-vida de 2 dias. Quanto tempo até ficar seguro?",["2 dias","4 dias","6 dias","8 dias"],3,"160 → 80 → 40 → 20 → 10: 4 meias-vidas = 8 dias."]]},
+{n:"Bloco 1 (administração)",x:420,y:350,w:140,h:70,c:"#4CC38A",q:[
+ ["O cobalto-60 tem Z = 27. Quantos nêutrons ele tem?",["27","60","33","87"],2,"Nêutrons = 60 − 27 = 33."],
+ ["O carbono-14 (Z = 6) tem quantos nêutrons?",["6","8","12","14"],1,"14 − 6 = 8 nêutrons."]]},
+{n:"Painéis solares (Fonte Ômega)",x:490,y:180,w:130,h:90,c:"#E5533D",q:[
+ ["A Fonte Ômega (Z = 27, A = 60) emite beta e gama. Qual blindagem protege dos dois?",["Papel","Chumbo","Plástico","Nenhuma"],1,"O material que barra a gama também barra a beta."],
+ ["400 µSv/h, nível seguro de 25 µSv/h, meia-vida de 5 anos. Quanto tempo só esperando?",["5 anos","10 anos","20 anos","40 anos"],2,"400 → 200 → 100 → 50 → 25: 4 meias-vidas = 20 anos. Esperar é inviável."]]}
+];
+var CL=[["Químico(a)",5],["Físico(a)",4],["Biólogo(a)",2],["Engenheiro(a)",3]];
+var KC=["#F2C230","#4CC38A","#5AA9E6","#E5533D","#C58AF9","#F2873A"];
+var me={x:330,y:235,tx:330,ty:235,n:"",c:0,k:0,s:0},dose=0,done={},others={},room=null,won=false,started=false,curZ=-1;
+
+var zs="";
+Z.forEach(function(z){
+ var lx=z.r?z.x:z.x+z.w/2,ly=z.r?z.y+4:z.y+z.h/2+4;
+ zs+=(z.r?'<circle cx="'+z.x+'" cy="'+z.y+'" r="'+z.r+'"':'<rect x="'+z.x+'" y="'+z.y+'" width="'+z.w+'" height="'+z.h+'" rx="8"')+' fill="#1A2B24" stroke="'+z.c+'" stroke-width="2"/><text x="'+lx+'" y="'+ly+'" fill="#E8F0EB" font-size="13" text-anchor="middle">'+esc(z.n.split(" (")[0])+'</text>';
+});
+$("#zs").innerHTML=zs;
+
+var cl="";CL.forEach(function(c,i){cl+='<button type="button" data-i="'+i+'" class="'+(i?"":"on")+'">'+c[0]+'</button>'});$("#cl").innerHTML=cl;
+var kl="";KC.forEach(function(c,i){kl+='<button type="button" class="sw '+(i?"":"on")+'" data-i="'+i+'" aria-label="Cor '+(i+1)+'" style="background:'+c+'"></button>'});$("#kl").innerHTML=kl;
+function pick(box,key){box.addEventListener("click",function(e){var b=e.target.closest("button");if(!b)return;[].forEach.call(box.children,function(x){x.classList.remove("on")});b.classList.add("on");me[key]=+b.dataset.i})}
+pick($("#cl"),"c");pick($("#kl"),"k");
+
+function inZ(z,x,y){return z.r?Math.hypot(x-z.x,y-z.y)<=z.r:(x>=z.x&&x<=z.x+z.w&&y>=z.y&&y<=z.y+z.h)}
+function zoneAt(){for(var i=0;i<Z.length;i++)if(inZ(Z[i],me.x,me.y))return i;return -1}
+function total(){var t=me.s;for(var id in others)t+=others[id].s||0;return t}
+function log(n,t){var d=document.createElement("div"),b=document.createElement("b");b.textContent=n+": ";d.appendChild(b);d.appendChild(document.createTextNode(t));var l=$("#log");l.appendChild(d);while(l.children.length>40)l.removeChild(l.firstChild);l.scrollTop=l.scrollHeight}
+
+$("#map").addEventListener("pointerdown",function(e){
+ if(!started)return;var s=$("#map"),p=s.createSVGPoint();p.x=e.clientX;p.y=e.clientY;var q=p.matrixTransform(s.getScreenCTM().inverse());
+ me.tx=Math.max(10,Math.min(650,q.x));me.ty=Math.max(10,Math.min(460,q.y));pushP();
+});
+function step(o,dt){var dx=o.tx-o.x,dy=o.ty-o.y,d=Math.hypot(dx,dy),m=170*dt;if(d<=m){o.x=o.tx;o.y=o.ty}else{o.x+=dx/d*m;o.y+=dy/d*m}}
+var last=performance.now();
+function frame(t){
+ var dt=Math.min(.1,(t-last)/1000);last=t;
+ if(started){
+  step(me,dt);for(var id in others)step(others[id],dt);
+  var h="";
+  for(var id2 in others){var o=others[id2];h+='<circle cx="'+o.x+'" cy="'+o.y+'" r="9" fill="'+KC[o.k||0]+'"/><text x="'+o.x+'" y="'+(o.y-14)+'" fill="#E8F0EB" font-size="12" text-anchor="middle">'+esc(o.n||"")+'</text>'}
+  h+='<circle cx="'+me.x+'" cy="'+me.y+'" r="10" fill="'+KC[me.k]+'" stroke="#fff" stroke-width="2"/><text x="'+me.x+'" y="'+(me.y-15)+'" fill="#F2C230" font-size="12" font-weight="700" text-anchor="middle">'+esc(me.n)+' (você)</text>';
+  $("#ps").innerHTML=h;
+  var z=zoneAt();if(z!==curZ){curZ=z;var b=$("#zb");b.disabled=z<0;b.textContent=z<0?"Ande até uma zona":"Desafio: "+Z[z].n}
+  var th=Math.max(0,100-8*total());$("#tv").textContent=th;$("#tb").style.width=th+"%";
+  $("#dv").textContent=Math.round(dose);$("#db").style.width=Math.min(100,dose)+"%";$("#db").style.background=dose>70?"var(--rd)":dose>40?"var(--ye)":"var(--gr)";
+  $("#pc").textContent=(Object.keys(others).length+1)+" on-line";
+  if(th<=0&&!won){won=true;show("end","Fonte Ômega contida","A comunidade respondeu o bastante e a radiação foi contida. Vocês usaram tempo, distância, blindagem e meia-vida para proteger o campus.","Continuar explorando",function(){hide("end")})}
+ }
+ requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+setInterval(function(){
+ if(!started||$("#end").classList.contains("show"))return;
+ var z=zoneAt();if(z===0)dose=Math.max(0,dose-2);else if(z===4||z===6)dose+=1;
+ if(dose>=100)show("end","Dose máxima atingida","Você ficou tempo demais perto da fonte. Volte à base e lembre da regra de ouro: menos tempo, mais distância e a blindagem certa.","Voltar à base",function(){dose=50;me.x=me.tx=330;me.y=me.ty=235;pushP();hide("end")});
+},1000);
+
+function show(id,t,x,b,fn){if(id==="end"){$("#et").textContent=t;$("#ex").textContent=x;$("#eb").textContent=b;$("#eb").onclick=fn}$("#"+id).classList.add("show")}
+function hide(id){$("#"+id).classList.remove("show")}
+
+var cq=null,cz=-1;
+$("#zb").addEventListener("click",function(){
+ cz=zoneAt();if(cz<0)return;var z=Z[cz],n=-1;
+ for(var i=0;i<z.q.length;i++)if(!done[cz+"-"+i]){n=i;break}
+ $("#qz").textContent=z.n;$("#fb").style.display="none";
+ if(n<0){$("#qs").textContent="Você já concluiu esta zona. Siga para outra.";$("#qo").innerHTML="";cq=null;show("quiz");return}
+ cq=n;var q=z.q[n];$("#qs").textContent=q[0];
+ var o=q[1].map(function(t,i){return{t:t,i:i}}).sort(function(){return Math.random()-.5});
+ var box=$("#qo");box.innerHTML="";
+ o.forEach(function(it){var b=document.createElement("button");b.type="button";b.textContent=it.t;b.style.textAlign="left";b.style.height="auto";b.style.padding="10px 14px";b.onclick=function(){answer(it.i,b)};box.appendChild(b)});
+ show("quiz");
+});
+function answer(i,btn){
+ var q=Z[cz].q[cq],fb=$("#fb");fb.style.display="block";
+ if(i===q[2]){
+  var pts=CL[me.c][1]===cz?2:1;me.s+=pts;done[cz+"-"+cq]=1;
+  fb.style.borderColor="var(--gr)";fb.textContent="Correto! "+q[3]+" (+"+pts+(pts>1?" ponto, especialidade da sua classe)":" ponto)");
+  $("#qo").innerHTML="";var nb=document.createElement("button");nb.type="button";nb.className="pri";nb.textContent="Fechar";nb.onclick=function(){hide("quiz")};$("#qo").appendChild(nb);pushS();
+ }else{
+  dose+=10;btn.disabled=true;fb.style.borderColor="var(--rd)";fb.textContent="Ainda não. Sua dose subiu 10 µSv. Tente outra alternativa."
+ }
+}
+$("#qx").addEventListener("click",function(){hide("quiz")});
+
+function send(){var v=$("#ci").value.trim();if(!v)return;$("#ci").value="";log(me.n,v);wsend({t:"chat",x:v.slice(0,120)})}
+$("#cs").addEventListener("click",send);
+$("#ci").addEventListener("keydown",function(e){if(e.key==="Enter")send()});
+
+$("#go").addEventListener("click",function(){
+ me.n=($("#nm").value.trim()||"Aluno").slice(0,14);started=true;hide("intro");
+ log("Profa. Helena","Equipe, a radiação está subindo. Andem pelas zonas e respondam aos desafios. Cuidado com o laboratório e os painéis solares.");
+ joinMsg();
+});
+$("#note").textContent="Conectando ao campus…";
+var sala=(new URLSearchParams(location.search).get("sala")||"geral").toLowerCase().replace(/[^a-z0-9-]/g,"").slice(0,16)||"geral";
+var ws=null,tries=0;
+function wsend(o){if(ws&&ws.readyState===1)ws.send(JSON.stringify(o))}
+function pushP(){wsend({t:"pos",tx:me.tx,ty:me.ty})}
+function pushS(){wsend({t:"s",s:me.s})}
+function joinMsg(){wsend({t:"join",sala:sala,n:me.n,c:me.c,k:me.k,tx:me.tx,ty:me.ty,s:me.s})}
+function add(p){others[p.id]={x:+p.tx||330,y:+p.ty||235,tx:+p.tx||330,ty:+p.ty||235,n:String(p.n||"").slice(0,14),k:(p.k|0)%6,s:+p.s||0}}
+function connect(){
+ try{ws=new WebSocket((location.protocol==="https:"?"wss:":"ws:")+"//"+location.host+"/ws")}catch(x){$("#note").textContent="Modo solo: não foi possível conectar.";return}
+ ws.onopen=function(){tries=0;$("#note").textContent="Conectado à sala “"+sala+"”. Você verá os outros jogadores em tempo real.";if(started)joinMsg()};
+ ws.onmessage=function(e){var m;try{m=JSON.parse(e.data)}catch(x){return}
+  if(m.t==="hello"){others={};(m.peers||[]).forEach(add)}
+  else if(m.t==="j")add(m);
+  else if(m.t==="p"&&others[m.id]){others[m.id].tx=m.tx;others[m.id].ty=m.ty}
+  else if(m.t==="s"&&others[m.id])others[m.id].s=m.s;
+  else if(m.t==="l")delete others[m.id];
+  else if(m.t==="chat")log(String(m.n||"?").slice(0,14),String(m.x||"").slice(0,120));
+  else if(m.t==="full")$("#note").textContent="Sala cheia. Use outro nome de sala no link, por exemplo ?sala=turma2."};
+ ws.onclose=function(){others={};if(tries<8){tries++;$("#note").textContent="Reconectando…";setTimeout(connect,Math.min(8000,1000*tries))}else $("#note").textContent="Modo solo: sem conexão com o servidor."};
+ ws.onerror=function(){};
+}
+setInterval(function(){wsend({t:"ping"})},20000);
+connect();
+})();
+</script>
+</body>
+</html>
