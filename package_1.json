@@ -1,8 +1,0 @@
-{
-  "name": "operacao-meia-vida",
-  "version": "1.0.0",
-  "description": "Jogo didático multijogador sobre radioatividade no Campus Iporá do IF Goiano",
-  "private": true,
-  "scripts": { "start": "node server.js" },
-  "engines": { "node": ">=18" }
-}
